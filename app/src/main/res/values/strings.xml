@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">MINI PROJECT MAP</string>
+    <string name="person_icon">Person Icon</string>
+    <string name="person_name">Ferry Irwandi</string>
+    <string name="_24_june_2026">24 June 2026</string>
+    <string name="_21_years_old">21 Years Old</string>
+    <string name="see_the_calendar">See the Calendar</string>
+    <string name="birthday_list">Birthday List</string>
+    <string name="current_event">Current Event</string>
+</resources>
