@@ -20,18 +20,13 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // --- GANTI KODE OTOMATIS DENGAN KODE MANUAL DI BAWAH ---
         binding.bottomNavigation.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
-                // Jika item menu nav_home diklik...
                 R.id.nav_home -> {
-                    // ...pergi ke destinasi homeFragment3 di nav_graph
                     navController.navigate(R.id.homeFragment3)
                     true
                 }
-                // Jika item menu nav_calendar diklik...
                 R.id.nav_calendar -> {
-                    // ...pergi ke destinasi calendarFragment2 di nav_graph
                     navController.navigate(R.id.calendarFragment2)
                     true
                 }
