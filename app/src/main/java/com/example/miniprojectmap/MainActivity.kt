@@ -1,6 +1,8 @@
+package com.example.miniprojectmap
+
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.example.miniprojectmap.databinding.ActivityMainBinding // Impor kelas binding
+import com.example.miniprojectmap.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
