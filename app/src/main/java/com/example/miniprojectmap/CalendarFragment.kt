@@ -5,55 +5,108 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.miniprojectmap.databinding.FragmentCalendarBinding
+import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+// Data class sederhana untuk acara kita
+data class Event(val date: Long, val name: String)
 
-/**
- * A simple [Fragment] subclass.
- * Use the [CalendarFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class CalendarFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+// Adapter untuk RecyclerView
+class EventAdapter(private var events: List<Event>) : RecyclerView.Adapter<EventAdapter.EventViewHolder>() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
+    class EventViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val eventNameText: TextView = view.findViewById(R.id.eventNameText)
     }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EventViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_event, parent, false)
+        return EventViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: EventViewHolder, position: Int) {
+        holder.eventNameText.text = events[position].name
+    }
+
+    override fun getItemCount() = events.size
+
+    // Fungsi untuk memperbarui data di adapter
+    fun updateEvents(newEvents: List<Event>) {
+        events = newEvents
+        notifyDataSetChanged()
+    }
+}
+
+class CalendarFragment : Fragment() {
+
+    private var _binding: FragmentCalendarBinding? = null
+    private val binding get() = _binding!!
+
+    // Buat data acara dummy
+    private val allEvents = mutableListOf<Event>()
+    private lateinit var eventAdapter: EventAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_calendar, container, false)
+    ): View {
+        _binding = FragmentCalendarBinding.inflate(inflater, container, false)
+        createDummyEvents() // Panggil fungsi untuk buat data dummy
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment CalendarFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            CalendarFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Setup RecyclerView
+        eventAdapter = EventAdapter(allEvents)
+        binding.eventsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+        binding.eventsRecyclerView.adapter = eventAdapter
+        updateEventListForToday() // Tampilkan acara hari ini saat pertama kali dibuka
+
+        // Listener untuk kalender
+        binding.calendarViewNative.setOnDateChangeListener { _, year, month, dayOfMonth ->
+            val selectedCalendar = Calendar.getInstance().apply {
+                set(year, month, dayOfMonth, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
             }
+            val selectedDateMillis = selectedCalendar.timeInMillis
+
+            // Filter acara berdasarkan tanggal yang dipilih
+            val filteredEvents = allEvents.filter { it.date == selectedDateMillis }
+            eventAdapter.updateEvents(filteredEvents)
+
+            // Update teks judul
+            val sdf = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+            binding.selectedDateText.text = "Acara pada ${sdf.format(selectedCalendar.time)}"
+        }
+    }
+
+    private fun createDummyEvents() {
+        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+        val nextWeek = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 7) }
+
+        allEvents.add(Event(today.timeInMillis, "Rapat Panitia Inti"))
+        allEvents.add(Event(today.timeInMillis, "Ulang Tahun Ferry Irwandi"))
+        allEvents.add(Event(tomorrow.timeInMillis, "Briefing Acara Puncak"))
+        allEvents.add(Event(nextWeek.timeInMillis, "Cek Lokasi Venue"))
+    }
+
+    private fun updateEventListForToday() {
+        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val sdf = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+        binding.selectedDateText.text = "Acara pada ${sdf.format(today.time)}"
+        val todaysEvents = allEvents.filter { it.date == today.timeInMillis }
+        eventAdapter.updateEvents(todaysEvents)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

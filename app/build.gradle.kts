@@ -55,4 +55,5 @@ dependencies {
     val nav_version = "2.7.7" // Gunakan versi terbaru
     implementation("androidx.navigation:navigation-fragment-ktx:$nav_version")
     implementation("androidx.navigation:navigation-ui-ktx:$nav_version")
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
 }

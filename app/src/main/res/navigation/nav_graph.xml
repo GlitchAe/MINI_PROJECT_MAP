@@ -3,26 +3,34 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/homeFragment3">
+    app:startDestination="@id/nav_home">
 
     <fragment
-        android:id="@+id/homeFragment3"
+        android:id="@+id/nav_home"
         android:name="com.example.miniprojectmap.HomeFragment"
-        android:label="fragment_home"
-        tools:layout="@layout/fragment_home" />
+        android:label="Home"
+        tools:layout="@layout/fragment_home">
+
+        <action
+            android:id="@+id/action_home_to_birthday"
+            app:destination="@id/nav_birthday_list" />
+        <action
+            android:id="@+id/action_home_to_calendar"
+            app:destination="@id/nav_calendar" />
+    </fragment>
     <fragment
-        android:id="@+id/calendarFragment2"
+        android:id="@+id/nav_calendar"
         android:name="com.example.miniprojectmap.CalendarFragment"
-        android:label="fragment_calendar"
+        android:label="Calendar"
         tools:layout="@layout/fragment_calendar" />
     <fragment
-        android:id="@+id/birthdayListFragment"
+        android:id="@+id/nav_birthday_list"
         android:name="com.example.miniprojectmap.BirthdayListFragment"
-        android:label="fragment_birthday_list"
+        android:label="Birthday List"
         tools:layout="@layout/fragment_birthday_list" />
     <fragment
-        android:id="@+id/profileFragment"
+        android:id="@+id/nav_profile"
         android:name="com.example.miniprojectmap.ProfileFragment"
-        android:label="fragment_profile"
+        android:label="Profile"
         tools:layout="@layout/fragment_profile" />
 </navigation>
