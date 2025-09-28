@@ -15,4 +15,14 @@
         android:name="com.example.miniprojectmap.CalendarFragment"
         android:label="fragment_calendar"
         tools:layout="@layout/fragment_calendar" />
+    <fragment
+        android:id="@+id/birthdayListFragment"
+        android:name="com.example.miniprojectmap.BirthdayListFragment"
+        android:label="fragment_birthday_list"
+        tools:layout="@layout/fragment_birthday_list" />
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.miniprojectmap.ProfileFragment"
+        android:label="fragment_profile"
+        tools:layout="@layout/fragment_profile" />
 </navigation>
