@@ -23,14 +23,11 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Tambahkan listener untuk tombol Birthday List
         binding.btnBirthdayList.setOnClickListener {
-            // Pergi ke halaman Birthday List
             findNavController().navigate(R.id.action_home_to_birthday)
         }
 
-        // Anda bisa tambahkan listener untuk tombol lain di sini
+
         // binding.btnSeeCalendar.setOnClickListener { ... }
     }
 

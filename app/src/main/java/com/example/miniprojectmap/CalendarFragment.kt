@@ -1,19 +1,19 @@
 package com.example.miniprojectmap
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.miniprojectmap.databinding.FragmentCalendarBinding
-import java.util.Calendar
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
-// Data class sederhana untuk acara kita
+
 data class Event(val date: Long, val name: String)
 
 // Adapter untuk RecyclerView
@@ -55,7 +55,7 @@ class CalendarFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentCalendarBinding.inflate(inflater, container, false)
-        createDummyEvents() // Panggil fungsi untuk buat data dummy
+        createDummyEvents()
         return binding.root
     }
 
