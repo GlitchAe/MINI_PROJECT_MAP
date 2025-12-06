@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "108025326138",
+    "project_id": "mini-project-map-f7416",
+    "storage_bucket": "mini-project-map-f7416.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:108025326138:android:65d10adcf358c4b3ee2303",
+        "android_client_info": {
+          "package_name": "com.example.miniprojectmap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7AVgrovGhpNyB_v6fec3eRFUIMX9rKzc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
