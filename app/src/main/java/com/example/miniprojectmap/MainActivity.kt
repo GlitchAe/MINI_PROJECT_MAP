@@ -9,6 +9,7 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.miniprojectmap.databinding.ActivityMainBinding
+import android.view.View
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,6 +27,15 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.loginFragment || destination.id == R.id.registerFragment) {
+                binding.bottomNavigation.visibility = View.GONE
+                binding.topAppBar.visibility = View.GONE // Atau supportActionBar?.hide()
+            } else {
+                binding.bottomNavigation.visibility = View.VISIBLE
+                binding.topAppBar.visibility = View.VISIBLE
+            }
+        }
 
         appBarConfiguration = AppBarConfiguration(
             setOf(R.id.nav_home, R.id.nav_calendar), // Halaman level atas

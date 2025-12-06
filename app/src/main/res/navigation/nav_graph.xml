@@ -3,7 +3,38 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/nav_home">
+    app:startDestination="@id/loginFragment"> <fragment
+    android:id="@+id/loginFragment"
+    android:name="com.example.miniprojectmap.LoginFragment"
+    android:label="Login"
+    tools:layout="@layout/fragment_login">
+
+    <action
+        android:id="@+id/action_login_to_home"
+        app:destination="@id/nav_home"
+        app:popUpTo="@id/loginFragment"
+        app:popUpToInclusive="true" />
+    <action
+        android:id="@+id/action_login_to_register"
+        app:destination="@id/registerFragment" />
+</fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.miniprojectmap.RegisterFragment"
+        android:label="Register"
+        tools:layout="@layout/fragment_register">
+
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/loginFragment" />
+
+        <action
+            android:id="@+id/action_register_to_home"
+            app:destination="@id/nav_home"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_home"
@@ -18,19 +49,23 @@
             android:id="@+id/action_home_to_calendar"
             app:destination="@id/nav_calendar" />
     </fragment>
+
     <fragment
         android:id="@+id/nav_calendar"
         android:name="com.example.miniprojectmap.CalendarFragment"
         android:label="Calendar"
         tools:layout="@layout/fragment_calendar" />
+
     <fragment
         android:id="@+id/nav_birthday_list"
         android:name="com.example.miniprojectmap.BirthdayListFragment"
         android:label="Birthday List"
         tools:layout="@layout/fragment_birthday_list" />
+
     <fragment
         android:id="@+id/nav_profile"
         android:name="com.example.miniprojectmap.ProfileFragment"
         android:label="Profile"
         tools:layout="@layout/fragment_profile" />
+
 </navigation>
