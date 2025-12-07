@@ -20,7 +20,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,7 +56,10 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onNavigateToCalendar: () -> Unit,
-    onNavigateToBirthday: () -> Unit
+    onNavigateToBirthday: () -> Unit,
+    // --- 1. PARAMETER BARU UNTUK BANADOC ---
+    onNavigateToScanner: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -65,7 +70,6 @@ fun HomeScreen(
     var ageNext by remember { mutableStateOf(0) }
     var daysRemaining by remember { mutableStateOf(0L) }
 
-    // (LOGIKA SAMA SEPERTI SEBELUMNYA - TIDAK DIUBAH)
     LaunchedEffect(Unit) {
         auth.currentUser?.uid?.let { uid ->
             db.collection("users").document(uid).get().addOnSuccessListener { document ->
@@ -114,7 +118,7 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // KARTU 1: WELCOME (GRADASI BIRU)
+            // KARTU 1: WELCOME
             Card(
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 shape = RoundedCornerShape(24.dp),
@@ -141,7 +145,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // KARTU 2: NEAREST BIRTHDAY (GRADASI TEAL)
+            // KARTU 2: NEAREST BIRTHDAY
             Text("Acara Terdekat", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -188,25 +192,70 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // MENU GRID
+            // MENU GRID (KALENDER & LIST)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Tombol Kalender
                 DashboardMenuCard(
                     title = "Kalender",
                     icon = Icons.Default.DateRange,
-                    color = Color(0xFF5C6BC0), // Indigo
+                    color = Color(0xFF5C6BC0),
                     onClick = onNavigateToCalendar,
                     modifier = Modifier.weight(1f)
                 )
-                // Tombol List
                 DashboardMenuCard(
                     title = "Daftar Ultah",
                     icon = Icons.AutoMirrored.Filled.List,
-                    color = Color(0xFFAB47BC), // Purple
+                    color = Color(0xFFAB47BC),
                     onClick = onNavigateToBirthday,
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 2. FITUR BARU: BANADOC (DI PALING BAWAH) ---
+            Text("BanaDoc AI", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+            Text("Deteksi penyakit pisang otomatis", fontSize = 12.sp, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF176)) // Kuning Pisang
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Tombol Scanner
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onNavigateToScanner() }) {
+                        Box(
+                            modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.CameraAlt, null, tint = Color(0xFFFBC02D), modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Scanner", fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
+                    }
+
+                    // Tombol Riwayat
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onNavigateToHistory() }) {
+                        Box(
+                            modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.History, null, tint = Color(0xFFFBC02D), modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Riwayat", fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
+                    }
+                }
+            }
+
+            // Padding bawah agar tidak tertutup Navbar
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }

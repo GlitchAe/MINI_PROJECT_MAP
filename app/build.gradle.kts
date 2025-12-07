@@ -75,4 +75,16 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.coil.compose)
+
+    val camerax_version = "1.3.3"
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+
+    // Location (Untuk Lokasi)
+    implementation(libs.play.services.location)
+
+    // Ikon Extended (Untuk ikon Scanner/History)
+    implementation(libs.androidx.material.icons.extended)
 }
