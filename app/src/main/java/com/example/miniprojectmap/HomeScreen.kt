@@ -167,7 +167,7 @@ fun HomeScreen(
                             Text(nearestPerson!!.name, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, color = Color.White)
 
                             val nextDate = DateUtils.getNextBirthday(nearestPerson!!.birthDate)
-                            val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+                            val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
                             val dateStr = if (nextDate != null) fmt.format(nextDate) else nearestPerson!!.birthDate
 
                             Text(dateStr, color = Color.White, fontWeight = FontWeight.Medium)

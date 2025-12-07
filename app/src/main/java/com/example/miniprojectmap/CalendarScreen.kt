@@ -113,7 +113,7 @@ fun CalendarScreen() {
             }
 
             Text(
-                text = SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(currentMonth.time),
+                text = SimpleDateFormat("MMMM yyyy", Locale.forLanguageTag("id-ID")).format(currentMonth.time),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0D47A1)
@@ -181,7 +181,7 @@ fun CalendarScreen() {
 
         // --- DAFTAR DETAIL ACARA ---
         Text(
-            text = "Acara Tanggal ${SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID")).format(selectedDate.time)}",
+            text = "Acara Tanggal ${SimpleDateFormat("dd MMMM yyyy", Locale.forLanguageTag("id-ID")).format(selectedDate.time)}",
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             color = Color(0xFF0D47A1)
