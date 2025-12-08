@@ -1,5 +1,6 @@
 package com.example.miniprojectmap
 
+// --- PERBAIKAN IMPORT LIFECYCLE ---
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,17 +50,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -71,9 +70,9 @@ fun ScannerScreen(
     onScanResult: (String) -> Unit
 ) {
     val context = LocalContext.current
+    // Gunakan LifecycleOwner yang baru
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // State Izin Kamera
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -96,17 +95,13 @@ fun ScannerScreen(
             val previewView = remember { PreviewView(context) }
             var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
 
-            // Setup CameraX
             LaunchedEffect(Unit) {
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
-
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-
                     imageCapture = ImageCapture.Builder().build()
                     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -136,7 +131,6 @@ fun ScannerScreen(
                                 val savedUri = Uri.fromFile(photoFile)
                                 onScanResult(savedUri.toString())
                             }
-
                             override fun onError(exc: ImageCaptureException) {
                                 Log.e("CameraX", "Gagal foto: ${exc.message}", exc)
                             }
@@ -155,15 +149,15 @@ fun ScannerScreen(
         }
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Izin kamera diperlukan untuk fitur ini.")
+            Text("Izin kamera diperlukan")
             Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                Text("Izinkan Kamera")
+                Text("Izinkan")
             }
         }
     }
 }
 
-// 2. HALAMAN HASIL SCAN (UPDATE BESAR - FITUR AI & UPLOAD)
+// 2. HALAMAN HASIL SCAN (Perbaikan Type Mismatch)
 @Composable
 fun ScanResultScreen(
     imagePath: String,
@@ -174,163 +168,110 @@ fun ScanResultScreen(
     val db = FirebaseFirestore.getInstance()
     val storage = FirebaseStorage.getInstance()
 
-    // State untuk UI
     var analysisResult by remember { mutableStateOf<BananaClassifier.Result?>(null) }
     var isAnalyzing by remember { mutableStateOf(true) }
     var isUploading by remember { mutableStateOf(false) }
 
-    // Efek Samping: Jalankan Analisa saat layar dibuka
     LaunchedEffect(Unit) {
-        // Panggil "Otak" AI kita
         analysisResult = BananaClassifier.classifyImage(context, imagePath)
         isAnalyzing = false
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 1. Gambar Background (Full)
         Image(
             painter = rememberAsyncImagePainter(imagePath),
             contentDescription = "Hasil Foto",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-
-        // Overlay Gelap biar tulisan terbaca
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
-        // 2. Konten Hasil (Di Tengah/Bawah)
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(
-                    Color.White,
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                )
+                .background(Color.White, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Indikator Loading Analisa
             if (isAnalyzing) {
                 CircularProgressIndicator(color = Color(0xFFFBC02D))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Sedang menganalisa pisang...", color = Color.Gray)
-            }
-            else if (analysisResult != null) {
-                // HASIL DETEKSI
+                Text("Menganalisa...", color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+            } else if (analysisResult != null) {
                 val result = analysisResult!!
-
                 Text("Hasil Deteksi:", fontSize = 14.sp, color = Color.Gray)
                 Text(result.diseaseName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
 
-                // Badge Akurasi
                 Surface(
                     color = if(result.diseaseName.contains("Sehat")) Color(0xFFC8E6C9) else Color(0xFFFFCCBC),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.padding(vertical = 8.dp)
                 ) {
-                    Text(
-                        text = "Akurasi: ${result.confidence}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = Color.Black,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Akurasi: ${result.confidence}", modifier = Modifier.padding(8.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Detail & Solusi
-                Text("Gejala:", fontWeight = FontWeight.Bold)
-                Text(result.description, fontSize = 14.sp)
+                Text("Gejala:", fontWeight = FontWeight.Bold); Text(result.description, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Saran Penanganan:", fontWeight = FontWeight.Bold)
-                Text(result.solution, fontSize = 14.sp)
-
+                Text("Solusi:", fontWeight = FontWeight.Bold); Text(result.solution, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // TOMBOL SIMPAN
                 Button(
                     onClick = {
                         isUploading = true
-                        val file = Uri.fromFile(File(Uri.parse(imagePath).path))
-                        // Upload ke Folder: scan_history/UID_USER/WAKTU.jpg
+
+                        // --- PERBAIKAN FATAL ERROR (Type Mismatch) ---
+                        // Kita tidak pakai File() lagi, langsung parse Uri dari String
+                        val fileUri = Uri.parse(imagePath)
+
                         val storageRef = storage.reference.child("scan_history/${auth.currentUser?.uid}/${System.currentTimeMillis()}.jpg")
 
-                        // 1. Upload Foto ke Storage
-                        storageRef.putFile(file)
+                        storageRef.putFile(fileUri) // Langsung upload Uri
                             .addOnSuccessListener {
-                                // 2. Ambil URL Foto
-                                storageRef.downloadUrl.addOnSuccessListener { uri ->
-                                    // 3. Simpan Data ke Firestore
+                                storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                                     val historyData = hashMapOf(
                                         "userId" to auth.currentUser?.uid,
                                         "diseaseName" to result.diseaseName,
                                         "confidence" to result.confidence,
                                         "date" to SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date()),
-                                        "imageUrl" to uri.toString(),
+                                        "imageUrl" to downloadUrl.toString(),
                                         "description" to result.description
                                     )
-
-                                    db.collection("scan_history")
-                                        .add(historyData)
+                                    db.collection("scan_history").add(historyData)
                                         .addOnSuccessListener {
                                             isUploading = false
-                                            Toast.makeText(context, "Disimpan ke Riwayat!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Tersimpan!", Toast.LENGTH_SHORT).show()
                                             onBackToHome()
                                         }
                                 }
                             }
                             .addOnFailureListener {
                                 isUploading = false
-                                Toast.makeText(context, "Gagal Upload: ${it.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Gagal: ${it.message}", Toast.LENGTH_SHORT).show()
                             }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     enabled = !isUploading,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBC02D))
                 ) {
-                    if (isUploading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Menyimpan...")
-                    } else {
-                        Text("Simpan ke Riwayat", color = Color.Black)
-                    }
+                    if (isUploading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    else Text("Simpan ke Riwayat", color = Color.Black)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                // Tombol Batal
-                OutlinedButton(
-                    onClick = onBackToHome,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Tutup Tanpa Simpan")
-                }
+                OutlinedButton(onClick = onBackToHome, modifier = Modifier.fillMaxWidth()) { Text("Tutup") }
             }
         }
     }
 }
 
-// 3. HALAMAN RIWAYAT (Placeholder - Akan kita update setelah ini)
+// ... (HistoryScreen & DetailScreen biarkan kosong dulu) ...
 @Composable
 fun HistoryScreen(onDetailClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("List Riwayat Penyakit")
-            Button(onClick = onDetailClick) {
-                Text("Lihat Detail (Contoh)")
-            }
-        }
-    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Halaman Riwayat") }
 }
-
-// 4. HALAMAN DETAIL (Placeholder)
 @Composable
 fun DiseaseDetailScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Detail Lengkap Penyakit")
-    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Detail Penyakit") }
 }

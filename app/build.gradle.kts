@@ -74,7 +74,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose.v296)
     implementation(libs.androidx.recyclerview)
 
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.material3)
@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.material)
 
     implementation(libs.guava)
     implementation(libs.androidx.camera.core)
