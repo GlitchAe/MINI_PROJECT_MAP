@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -39,12 +41,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,8 +59,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -67,7 +73,9 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    // Inject SettingsViewModel untuk Dark Mode
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -78,7 +86,7 @@ fun ProfileScreen(
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf("") }
-    var photoUri by remember { mutableStateOf<Uri?>(null) } // Menyimpan Foto Profil
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
 
     // State Mode Edit & Loading
     var isEditing by remember { mutableStateOf(false) }
@@ -88,13 +96,16 @@ fun ProfileScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
-    // Launcher untuk Ambil Foto dari Galeri
+    // State Dark Mode (Ambil dari ViewModel)
+    val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
+
+    // Launcher Foto
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> if (uri != null) photoUri = uri }
     )
 
-    // AMBIL DATA DARI FIRESTORE SAAT LAYAR DIBUKA
+    // AMBIL DATA DARI FIRESTORE
     LaunchedEffect(Unit) {
         currentUser?.let { user ->
             db.collection("users").document(user.uid).get()
@@ -108,7 +119,7 @@ fun ProfileScreen(
         }
     }
 
-    // LOGIKA DATE PICKER
+    // DATE PICKER DIALOG
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -127,7 +138,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profil Saya") },
+                title = { Text("Profil Saya", fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { auth.signOut(); onLogout() }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, "Logout", tint = MaterialTheme.colorScheme.error)
@@ -144,20 +155,18 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- 1. FOTO PROFIL (KLIK UNTUK GANTI) ---
+            // --- 1. FOTO PROFIL ---
             Box(
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE0F2F1))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable(enabled = isEditing) {
-                        // Buka Galeri saat mode Edit
                         photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                 contentAlignment = Alignment.Center
             ) {
                 if (photoUri != null) {
-                    // Tampilkan Foto dari Galeri
                     AsyncImage(
                         model = photoUri,
                         contentDescription = "Foto Profil",
@@ -165,16 +174,13 @@ fun ProfileScreen(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    // Tampilkan Icon Default
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
                         modifier = Modifier.size(60.dp),
-                        tint = Color(0xFF00695C)
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-
-                // Ikon Kamera kecil jika sedang mode edit
                 if (isEditing) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                         Text("Ubah Foto", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 16.dp))
@@ -184,111 +190,100 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // TOMBOL EDIT (Pojok Kanan)
+            // TOMBOL EDIT
             if (!isEditing) {
                 Button(
                     onClick = { isEditing = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Black)
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Profil", color = Color.Black)
+                    Text("Edit Profil", color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // --- 2. FORM DATA ---
-
-            // Nama Lengkap
             OutlinedTextField(
-                value = fullName,
-                onValueChange = { fullName = it },
+                value = fullName, onValueChange = { fullName = it },
                 label = { Text("Nama Lengkap") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = isEditing, // Cuma bisa ngetik kalau lagi mode Edit
+                enabled = isEditing,
                 colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.Black,
-                    disabledBorderColor = Color.Gray,
-                    disabledLabelColor = Color.Black
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email (Bisa diedit di database, tapi tidak mengubah login auth demi keamanan)
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = email, onValueChange = { email = it },
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isEditing,
                 colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.Black,
-                    disabledBorderColor = Color.Gray,
-                    disabledLabelColor = Color.Black
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tanggal Lahir (Pakai DatePicker)
             OutlinedTextField(
-                value = birthDate,
-                onValueChange = {},
+                value = birthDate, onValueChange = {},
                 label = { Text("Tanggal Lahir") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = isEditing) { showDatePicker = true }, // Klik untuk buka kalender
-                enabled = false,
-                readOnly = true,
-                trailingIcon = {
-                    if(isEditing) IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Pilih Tanggal")
-                    }
-                },
+                modifier = Modifier.fillMaxWidth().clickable(enabled = isEditing) { showDatePicker = true },
+                enabled = false, readOnly = true,
+                trailingIcon = { if(isEditing) IconButton(onClick = { showDatePicker = true }) { Icon(Icons.Default.DateRange, "Pilih") } },
                 colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.Black,
-                    disabledBorderColor = Color.Gray,
-                    disabledLabelColor = Color.Black,
-                    disabledTrailingIconColor = Color.Gray
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 3. PENGATURAN TEMA (DARK MODE) ---
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Mode Gelap", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Ubah tampilan aplikasi", fontSize = 12.sp, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = { isChecked ->
+                            settingsViewModel.toggleTheme(isChecked)
+                        }
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- 3. TOMBOL SIMPAN / BATAL ---
+            // --- 4. TOMBOL SIMPAN ---
             if (isEditing) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Tombol Batal
-                    OutlinedButton(
-                        onClick = { isEditing = false },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Batal")
-                    }
-
-                    // Tombol Simpan
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { isEditing = false }, modifier = Modifier.weight(1f)) { Text("Batal") }
                     Button(
                         onClick = {
                             if (fullName.isNotEmpty() && email.isNotEmpty() && birthDate.isNotEmpty() && currentUser != null) {
                                 isLoading = true
-
-                                // Data yang mau diupdate ke Firestore
-                                val updates = mapOf(
-                                    "fullName" to fullName,
-                                    "email" to email,
-                                    "birthDate" to birthDate
-                                    // "photoUri" to photoUri.toString() // Nanti kalau sudah pakai Storage
-                                )
-
-                                db.collection("users").document(currentUser.uid)
-                                    .update(updates)
+                                val updates = mapOf("fullName" to fullName, "email" to email, "birthDate" to birthDate)
+                                db.collection("users").document(currentUser.uid).update(updates)
                                     .addOnSuccessListener {
-                                        isLoading = false
-                                        isEditing = false
-                                        Toast.makeText(context, "Data Berhasil Diupdate!", Toast.LENGTH_SHORT).show()
+                                        isLoading = false; isEditing = false
+                                        Toast.makeText(context, "Berhasil Diupdate!", Toast.LENGTH_SHORT).show()
                                     }
                                     .addOnFailureListener {
                                         isLoading = false
@@ -303,8 +298,6 @@ fun ProfileScreen(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

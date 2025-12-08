@@ -41,6 +41,12 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
@@ -52,20 +58,21 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.crashlytics)
 
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
 
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-firestore")
-
+    implementation(libs.google.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.firebase.storage)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation(libs.androidx.glance.appwidget)
 
 
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("androidx.recyclerview:recyclerview:1.4.0")
+    implementation(libs.androidx.navigation.compose.v296)
+    implementation(libs.androidx.recyclerview)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -75,8 +82,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-    val camerax_version = "1.3.3"
+    implementation(libs.guava)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
@@ -87,4 +96,8 @@ dependencies {
 
     // Ikon Extended (Untuk ikon Scanner/History)
     implementation(libs.androidx.material.icons.extended)
+
+    //retrofit (Hit API)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
 }

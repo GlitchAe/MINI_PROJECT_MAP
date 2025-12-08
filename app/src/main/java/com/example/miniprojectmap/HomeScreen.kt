@@ -20,9 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,11 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -57,50 +51,10 @@ import java.util.Locale
 fun HomeScreen(
     onNavigateToCalendar: () -> Unit,
     onNavigateToBirthday: () -> Unit,
-    // --- 1. PARAMETER BARU UNTUK BANADOC ---
-    onNavigateToScanner: () -> Unit,
-    onNavigateToHistory: () -> Unit
+    // HAPUS PARAMETER SCANNER & HISTORY (Karena sudah pindah ke menu sendiri)
+    viewModel: HomeViewModel = viewModel()
 ) {
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    val repo = remember { BirthdayRepository() }
-
-    var userName by remember { mutableStateOf("Loading...") }
-    var nearestPerson by remember { mutableStateOf<Person?>(null) }
-    var ageNext by remember { mutableStateOf(0) }
-    var daysRemaining by remember { mutableStateOf(0L) }
-
-    LaunchedEffect(Unit) {
-        auth.currentUser?.uid?.let { uid ->
-            db.collection("users").document(uid).get().addOnSuccessListener { document ->
-                var myProfile: Person? = null
-                if (document != null && document.exists()) {
-                    userName = document.getString("fullName") ?: "User"
-                    val myDate = document.getString("birthDate") ?: ""
-                    if (myDate.isNotEmpty()) {
-                        myProfile = Person(id = uid, name = "$userName (Saya)", birthDate = myDate, userId = uid)
-                    }
-                }
-                repo.getBirthdays(uid) { friends ->
-                    val allPeople = friends + listOfNotNull(myProfile)
-                    if (allPeople.isNotEmpty()) {
-                        val sorted = allPeople.sortedBy { person ->
-                            DateUtils.getNextBirthday(person.birthDate)?.time ?: Long.MAX_VALUE
-                        }
-                        val nearest = sorted.firstOrNull()
-                        if (nearest != null) {
-                            nearestPerson = nearest
-                            ageNext = DateUtils.getAgeOnNextBirthday(nearest.birthDate)
-                            val nextDate = DateUtils.getNextBirthday(nearest.birthDate)
-                            if (nextDate != null) {
-                                daysRemaining = (nextDate.time - System.currentTimeMillis()) / (1000 * 60 * 60 * 24)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -120,7 +74,7 @@ fun HomeScreen(
         ) {
             // KARTU 1: WELCOME
             Card(
-                modifier = Modifier.fillMaxWidth().height(120.dp),
+                modifier = Modifier.fillMaxWidth().height(140.dp), // Perbesar sedikit tingginya
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
@@ -135,9 +89,28 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp), tint = Color.White)
                         }
-                        Column(modifier = Modifier.padding(start = 16.dp)) {
-                            Text("Halo, $userName!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Semoga harimu menyenangkan ✨", fontSize = 12.sp, color = Color.White.copy(alpha = 0.9f))
+
+                        // --- BAGIAN INI DIUPDATE ---
+                        Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                            Text("Halo, ${uiState.userName}!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Tampilkan Quote dari API
+                            Text(
+                                text = uiState.quote,
+                                fontSize = 12.sp,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                color = Color.White.copy(alpha = 0.9f),
+                                lineHeight = 16.sp,
+                                maxLines = 3
+                            )
+                            Text(
+                                text = uiState.author,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 }
@@ -163,20 +136,21 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        if (nearestPerson != null) {
-                            Text(nearestPerson!!.name, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, color = Color.White)
+                        val nearest = uiState.nearestPerson
 
-                            val nextDate = DateUtils.getNextBirthday(nearestPerson!!.birthDate)
+                        if (nearest != null) {
+                            Text(nearest.name, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, color = Color.White)
+
+                            val nextDate = DateUtils.getNextBirthday(nearest.birthDate)
                             val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
-                            val dateStr = if (nextDate != null) fmt.format(nextDate) else nearestPerson!!.birthDate
+                            val dateStr = if (nextDate != null) fmt.format(nextDate) else nearest.birthDate
 
                             Text(dateStr, color = Color.White, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Badge Umur
                             Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
                                 Text(
-                                    text = if (daysRemaining <= 0L) "🎉 HARI INI KE-$ageNext! 🎂" else "⏳ H-$daysRemaining menuju ke-$ageNext",
+                                    text = if (uiState.daysRemaining <= 0L) "🎉 HARI INI KE-${uiState.ageNext}! 🎂" else "⏳ H-${uiState.daysRemaining} menuju ke-${uiState.ageNext}",
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
@@ -192,75 +166,19 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // MENU GRID (KALENDER & LIST)
+            // MENU GRID (Memanggil DashboardMenuCard)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardMenuCard(
-                    title = "Kalender",
-                    icon = Icons.Default.DateRange,
-                    color = Color(0xFF5C6BC0),
-                    onClick = onNavigateToCalendar,
-                    modifier = Modifier.weight(1f)
-                )
-                DashboardMenuCard(
-                    title = "Daftar Ultah",
-                    icon = Icons.AutoMirrored.Filled.List,
-                    color = Color(0xFFAB47BC),
-                    onClick = onNavigateToBirthday,
-                    modifier = Modifier.weight(1f)
-                )
+                DashboardMenuCard("Kalender", Icons.Default.DateRange, Color(0xFF5C6BC0), onNavigateToCalendar, Modifier.weight(1f))
+                DashboardMenuCard("Daftar Ultah", Icons.AutoMirrored.Filled.List, Color(0xFFAB47BC), onNavigateToBirthday, Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- 2. FITUR BARU: BANADOC (DI PALING BAWAH) ---
-            Text("BanaDoc AI", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
-            Text("Deteksi penyakit pisang otomatis", fontSize = 12.sp, color = Color.Gray)
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(6.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF176)) // Kuning Pisang
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    // Tombol Scanner
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onNavigateToScanner() }) {
-                        Box(
-                            modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.CameraAlt, null, tint = Color(0xFFFBC02D), modifier = Modifier.size(32.dp))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Scanner", fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
-                    }
-
-                    // Tombol Riwayat
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onNavigateToHistory() }) {
-                        Box(
-                            modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.History, null, tint = Color(0xFFFBC02D), modifier = Modifier.size(32.dp))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Riwayat", fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
-                    }
-                }
-            }
-
-            // Padding bawah agar tidak tertutup Navbar
-            Spacer(modifier = Modifier.height(100.dp))
+            // BAGIAN BANADOC (KARTU KUNING) SUDAHDIHAPUS DARI SINI
+            // KARENA SUDAH PINDAH KE HALAMAN 'BanaDocMenuScreen'
         }
     }
 }
 
-// Komponen Kecil untuk Tombol Menu Kotak
+// Helper Function (Tetap Ada)
 @Composable
 fun DashboardMenuCard(title: String, icon: ImageVector, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(

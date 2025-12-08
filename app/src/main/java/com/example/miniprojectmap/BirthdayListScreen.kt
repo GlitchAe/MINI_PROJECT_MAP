@@ -42,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,8 +54,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -62,69 +63,30 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BirthdayListScreen() {
-    val repo = remember { BirthdayRepository() }
+fun BirthdayListScreen(
+    viewModel: BirthdayListViewModel = viewModel()
+) {
     val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
+    val combinedList by viewModel.birthdayList.collectAsState()
 
-    // State Data Asli
-    var friendsList by remember { mutableStateOf<List<Person>>(emptyList()) }
-    var myProfile by remember { mutableStateOf<Person?>(null) }
-
-    // State Hasil Gabungan & Filter
+    var searchQuery by remember { mutableStateOf("") }
     var displayList by remember { mutableStateOf<List<Person>>(emptyList()) }
-
-    // State UI
-    var searchQuery by remember { mutableStateOf("") } // <-- STATE PENCARIAN
     var showDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var newDate by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
-    // 1. AMBIL DATA
-    LaunchedEffect(Unit) {
-        auth.currentUser?.uid?.let { uid ->
-            repo.getBirthdays(uid) { list -> friendsList = list }
-            db.collection("users").document(uid).get().addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    val name = doc.getString("fullName") ?: "Saya"
-                    val date = doc.getString("birthDate") ?: ""
-                    if (date.isNotEmpty()) {
-                        myProfile = Person(id = uid, name = "$name (Saya)", birthDate = date, userId = uid)
-                    }
-                }
-            }
-        }
-    }
-
-    // 2. LOGIKA SORTING & SEARCHING (PENTING!)
-    LaunchedEffect(friendsList, myProfile, searchQuery) {
-        val rawList = friendsList + listOfNotNull(myProfile)
-
-        // A. Sorting (Terdekat)
-        val sortedList = rawList.sortedBy { person ->
-            val date = DateUtils.parseDate(person.birthDate)
-            if (date != null) {
-                val cal = Calendar.getInstance()
-                cal.time = date
-                cal.set(Calendar.YEAR, Calendar.getInstance().get(Calendar.YEAR))
-                if (cal.timeInMillis < System.currentTimeMillis() - 86400000) cal.add(Calendar.YEAR, 1)
-                cal.timeInMillis
-            } else { Long.MAX_VALUE }
-        }
-
-        // B. Searching (Filter Nama)
+    LaunchedEffect(combinedList, searchQuery) {
         if (searchQuery.isEmpty()) {
-            displayList = sortedList
+            displayList = combinedList
         } else {
-            displayList = sortedList.filter {
+            displayList = combinedList.filter {
                 it.name.contains(searchQuery, ignoreCase = true)
             }
         }
     }
 
-    // LOGIKA DATE PICKER
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -142,19 +104,17 @@ fun BirthdayListScreen() {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }, containerColor = Color(0xFF26A69A), contentColor = Color.White) {
+            FloatingActionButton(onClick = { showDialog = true }, containerColor = TealAccent, contentColor = Color.White) {
                 Icon(Icons.Default.Add, "Tambah")
             }
         },
-        containerColor = Color(0xFFF5F7FA) // OffWhite
+        containerColor = OffWhite
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
 
-            // --- HEADER & SEARCH BAR ---
-            Text("Jadwal Ulang Tahun", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D47A1))
+            Text("Jadwal Ulang Tahun", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Kolom Pencarian
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -163,7 +123,7 @@ fun BirthdayListScreen() {
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF26A69A),
+                    focusedBorderColor = TealAccent,
                     unfocusedContainerColor = Color.White,
                     focusedContainerColor = Color.White
                 ),
@@ -172,35 +132,31 @@ fun BirthdayListScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- LIST ---
             if (displayList.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (searchQuery.isNotEmpty()) "Nama tidak ditemukan" else "Belum ada data",
-                        color = Color.Gray
-                    )
+                    Text(if (searchQuery.isNotEmpty()) "Tidak ketemu" else "Belum ada data", color = Color.Gray)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(displayList) { person ->
                         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                         val age = DateUtils.getAgeInYear(person.birthDate, currentYear)
-                        val zodiac = DateUtils.getZodiac(person.birthDate) // <-- AMBIL ZODIAK
+                        val zodiac = DateUtils.getZodiac(person.birthDate)
                         val isMe = person.id == auth.currentUser?.uid
 
+                        // Memanggil fungsi Helper di bawah
                         BirthdayItemZodiac(
                             person = person,
                             age = age,
-                            zodiac = zodiac, // <-- KIRIM KE UI
+                            zodiac = zodiac,
                             isMe = isMe,
-                            onDelete = { if (!isMe) repo.deleteBirthday(person.id) }
+                            onDelete = { if (!isMe) viewModel.deleteFriend(person.id) }
                         )
                     }
                 }
             }
         }
 
-        // DIALOG TAMBAH (SAMA)
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },
@@ -213,15 +169,14 @@ fun BirthdayListScreen() {
                             value = newDate, onValueChange = {}, label = { Text("Tanggal Lahir") },
                             modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
                             readOnly = true, enabled = false,
-                            trailingIcon = { IconButton(onClick = { showDatePicker = true }) { Icon(Icons.Default.DateRange, "Pilih") } },
-                            colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = Color.Gray, disabledLabelColor = Color.Black, disabledTrailingIconColor = Color.Black)
+                            trailingIcon = { IconButton(onClick = { showDatePicker = true }) { Icon(Icons.Default.DateRange, "Pilih") } }
                         )
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
-                        if (newName.isNotEmpty() && newDate.isNotEmpty() && auth.currentUser != null) {
-                            repo.addBirthday(auth.currentUser!!.uid, newName, newDate, {}, {})
+                        if (newName.isNotEmpty() && newDate.isNotEmpty()) {
+                            viewModel.addFriend(newName, newDate)
                             showDialog = false
                             newName = ""; newDate = ""
                         }
@@ -233,6 +188,7 @@ fun BirthdayListScreen() {
     }
 }
 
+// ▼▼▼ JANGAN SAMPAI KETINGGALAN COPY INI (Fungsi Helper) ▼▼▼
 @Composable
 fun BirthdayItemZodiac(person: Person, age: Int, zodiac: String, isMe: Boolean, onDelete: () -> Unit) {
     Card(
@@ -245,7 +201,6 @@ fun BirthdayItemZodiac(person: Person, age: Int, zodiac: String, isMe: Boolean, 
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Ikon Lingkaran (Inisial)
             Box(
                 modifier = Modifier
                     .size(50.dp)
@@ -261,22 +216,17 @@ fun BirthdayItemZodiac(person: Person, age: Int, zodiac: String, isMe: Boolean, 
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(person.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
-
-                // Baris Info: Tanggal + Zodiak
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(person.birthDate, fontSize = 12.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.width(8.dp))
-
-                    // Chip Zodiak
                     if (zodiac.isNotEmpty()) {
                         Surface(
-                            color = Color(0xFFFFF9C4), // Background tetap Kuning Muda biar vibes-nya cerah
+                            color = Color(0xFFFFF9C4),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(20.dp),
                             shadowElevation = 1.dp
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 6.dp)) {
-                                // PERUBAHAN DI SINI: Color.Black
                                 Text(zodiac, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                         }
@@ -284,7 +234,6 @@ fun BirthdayItemZodiac(person: Person, age: Int, zodiac: String, isMe: Boolean, 
                 }
             }
 
-            // Badge Umur
             Surface(
                 color = Color(0xFFF5F7FA),
                 shape = RoundedCornerShape(8.dp)
