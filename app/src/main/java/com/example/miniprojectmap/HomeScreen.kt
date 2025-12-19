@@ -51,7 +51,6 @@ import java.util.Locale
 fun HomeScreen(
     onNavigateToCalendar: () -> Unit,
     onNavigateToBirthday: () -> Unit,
-    // HAPUS PARAMETER SCANNER & HISTORY (Karena sudah pindah ke menu sendiri)
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -72,9 +71,9 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // KARTU 1: WELCOME
+            // KARTU 1: WELCOME + QUOTE
             Card(
-                modifier = Modifier.fillMaxWidth().height(140.dp), // Perbesar sedikit tingginya
+                modifier = Modifier.fillMaxWidth().height(140.dp),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
@@ -89,28 +88,12 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp), tint = Color.White)
                         }
-
-                        // --- BAGIAN INI DIUPDATE ---
                         Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                             Text("Halo, ${uiState.userName}!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-
                             Spacer(modifier = Modifier.height(4.dp))
-
-                            // Tampilkan Quote dari API
-                            Text(
-                                text = uiState.quote,
-                                fontSize = 12.sp,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                color = Color.White.copy(alpha = 0.9f),
-                                lineHeight = 16.sp,
-                                maxLines = 3
-                            )
-                            Text(
-                                text = uiState.author,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
+                            // Quote dari API Retrofit
+                            Text(text = uiState.quote, fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, color = Color.White.copy(alpha = 0.9f), lineHeight = 16.sp, maxLines = 3)
+                            Text(text = uiState.author, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                         }
                     }
                 }
@@ -118,7 +101,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // KARTU 2: NEAREST BIRTHDAY
+            // KARTU 2: ULTAH TERDEKAT
             Text("Acara Terdekat", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -137,25 +120,15 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         val nearest = uiState.nearestPerson
-
                         if (nearest != null) {
                             Text(nearest.name, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, color = Color.White)
-
                             val nextDate = DateUtils.getNextBirthday(nearest.birthDate)
                             val fmt = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
                             val dateStr = if (nextDate != null) fmt.format(nextDate) else nearest.birthDate
-
                             Text(dateStr, color = Color.White, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(8.dp))
-
                             Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                                Text(
-                                    text = if (uiState.daysRemaining <= 0L) "🎉 HARI INI KE-${uiState.ageNext}! 🎂" else "⏳ H-${uiState.daysRemaining} menuju ke-${uiState.ageNext}",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                                Text(text = if (uiState.daysRemaining <= 0L) "🎉 HARI INI KE-${uiState.ageNext}! 🎂" else "⏳ H-${uiState.daysRemaining} menuju ke-${uiState.ageNext}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                             }
                         } else {
                             Text("Belum ada data", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
@@ -166,32 +139,19 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // MENU GRID (Memanggil DashboardMenuCard)
+            // MENU GRID
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 DashboardMenuCard("Kalender", Icons.Default.DateRange, Color(0xFF5C6BC0), onNavigateToCalendar, Modifier.weight(1f))
                 DashboardMenuCard("Daftar Ultah", Icons.AutoMirrored.Filled.List, Color(0xFFAB47BC), onNavigateToBirthday, Modifier.weight(1f))
             }
-
-            // BAGIAN BANADOC (KARTU KUNING) SUDAHDIHAPUS DARI SINI
-            // KARENA SUDAH PINDAH KE HALAMAN 'BanaDocMenuScreen'
         }
     }
 }
 
-// Helper Function (Tetap Ada)
 @Composable
 fun DashboardMenuCard(title: String, icon: ImageVector, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.height(100.dp).clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Card(modifier = modifier.height(100.dp).clickable { onClick() }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = color, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.height(8.dp))
             Text(title, fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 14.sp)

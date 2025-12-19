@@ -50,55 +50,51 @@ android {
 }
 
 dependencies {
+    // --- CORE ANDROID ---
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.activity:activity-compose:1.9.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.firebase.crashlytics)
+    // --- COMPOSE BOM (Versi Stabil Agustus 2024) ---
+    // Versi ini sudah memperbaiki bug clickable/indication yang Anda alami
+    implementation(platform("androidx.compose:compose-bom:2024.08.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
 
-    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    // PENTING: Tambahkan ini untuk mencegah crash ikon
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.material:material-icons-extended")
 
-    implementation(libs.google.firebase.auth)
-    implementation(libs.firebase.firestore)
-    implementation(libs.androidx.datastore.preferences)
-    implementation(libs.firebase.storage)
+    // --- NAVIGATION & LIFECYCLE ---
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    implementation(libs.androidx.glance.appwidget)
+    // --- FIREBASE (Versi Stabil) ---
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-crashlytics")
 
+    // --- DATASTORE & API ---
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
-    implementation(libs.androidx.navigation.compose.v296)
-    implementation(libs.androidx.recyclerview)
+    // --- COIL (Gambar) ---
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.activity.compose)
-    debugImplementation(libs.androidx.compose.ui.tooling.preview)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    implementation(libs.coil.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.material)
-
-    implementation(libs.guava)
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-
-    // Location (Untuk Lokasi)
-    implementation(libs.play.services.location)
-
-    // Ikon Extended (Untuk ikon Scanner/History)
-    implementation(libs.androidx.material.icons.extended)
-
-    //retrofit (Hit API)
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
+    // --- TESTING ---
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.08.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
