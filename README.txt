@@ -1,5 +1,3 @@
-APK is in: app/build/outputs/apk/debug/app-debug.apk
-
 =============================================================================
                   	HUT COMMUNITY TRACKER APP
 					X
