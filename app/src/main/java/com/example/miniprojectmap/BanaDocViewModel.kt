@@ -20,13 +20,16 @@ import java.util.Date
 import java.util.Locale
 import kotlin.random.Random
 
-// Ini harus di file BanaDocViewModel.kt
+// VERSI AMAN (MOCK AI) UNTUK DEMO
 class BanaDocViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+    // Kita tidak load BananaClassifier agar memori lega
+    // private val classifier = BananaClassifier(context)
 
     data class BanaDocUiState(
         val bitmap: Bitmap? = null,
@@ -43,7 +46,7 @@ class BanaDocViewModel(application: Application) : AndroidViewModel(application)
     private val _uiState = MutableStateFlow(BanaDocUiState())
     val uiState: StateFlow<BanaDocUiState> = _uiState.asStateFlow()
 
-    // LOGIC: Load & Resize Image
+    // Load & Resize Image
     fun processImage(uri: Uri) {
         _uiState.value = _uiState.value.copy(isImageLoading = true, selectedUri = uri, diagnosisResult = null)
 
@@ -55,7 +58,7 @@ class BanaDocViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // LOGIC: Ambil Lokasi (GPS)
+    // Ambil Lokasi (GPS)
     @Suppress("MissingPermission")
     fun fetchLocation() {
         viewModelScope.launch {
@@ -76,24 +79,27 @@ class BanaDocViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // LOGIC: AI Mock & Save to Firestore
+    // --- MOCK AI IMPLEMENTATION (SAFE MODE) ---
     fun analyzeAndSave() {
         _uiState.value = _uiState.value.copy(isAnalyzing = true)
-        fetchLocation()
+        fetchLocation() // Trigger GPS
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. SIMULASI LOADING AI (Biar terlihat mikir)
             kotlinx.coroutines.delay(2000)
 
+            // 2. HASIL RANDOM (Sesuai soal: Accuracy Ignored)
             val diseases = listOf("Panama Disease (Layu Fusarium)", "Black Sigatoka", "Banana Bunchy Top", "Sehat / Normal")
-            val result = diseases.random()
-            val score = Random.nextInt(75, 99)
+            val diseaseName = diseases.random()
+            val confidence = Random.nextInt(75, 99)
 
+            // 3. Simpan ke Firestore
             val uid = auth.currentUser?.uid
             if (uid != null) {
                 val historyData = hashMapOf(
                     "userId" to uid,
-                    "diseaseName" to result,
-                    "confidence" to score,
+                    "diseaseName" to diseaseName,
+                    "confidence" to confidence,
                     "date" to SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date()),
                     "latitude" to _uiState.value.lat,
                     "longitude" to _uiState.value.lng,
@@ -102,11 +108,14 @@ class BanaDocViewModel(application: Application) : AndroidViewModel(application)
                 db.collection("scan_history").add(historyData).await()
             }
 
-            _uiState.value = _uiState.value.copy(
-                isAnalyzing = false,
-                diagnosisResult = result,
-                confidenceScore = score
-            )
+            // 4. Update UI
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzing = false,
+                    diagnosisResult = diseaseName,
+                    confidenceScore = confidence
+                )
+            }
         }
     }
 }

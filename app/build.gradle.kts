@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.miniprojectmap"
-    compileSdk = 36
+    compileSdk = 35
 
     buildFeatures {
         viewBinding = true
@@ -40,12 +40,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-    }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 }
 
@@ -101,4 +95,9 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     // Library Lokasi (GPS)
     implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    // TFLite Support Library (Memudahkan pengolahan gambar)
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.9.0")
 }
