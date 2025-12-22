@@ -1,30 +1,16 @@
 package com.example.miniprojectmap
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
 
-// Pakai AndroidViewModel karena butuh "Context/Application" untuk akses DataStore
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+class SettingsViewModel : ViewModel() {
+    // Default: Ikuti System
+    private val _theme = MutableStateFlow(AppTheme.SYSTEM)
+    val theme: StateFlow<AppTheme> = _theme.asStateFlow()
 
-    private val dataStore = SettingsDataStore(application)
-
-    // Mengubah Flow menjadi State yang bisa dibaca UI
-    val isDarkMode: StateFlow<Boolean> = dataStore.isDarkModeFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
-
-    // Fungsi untuk mengubah tema (dipanggil saat Switch diklik)
-    fun toggleTheme(isDark: Boolean) {
-        viewModelScope.launch {
-            dataStore.saveThemeSetting(isDark)
-        }
+    fun setTheme(newTheme: AppTheme) {
+        _theme.value = newTheme
     }
 }

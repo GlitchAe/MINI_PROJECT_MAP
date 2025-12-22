@@ -99,4 +99,6 @@ dependencies {
 
     // WORK MANAGER (Untuk penjadwalan otomatis)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // Library Lokasi (GPS)
+    implementation("com.google.android.gms:play-services-location:21.2.0")
 }

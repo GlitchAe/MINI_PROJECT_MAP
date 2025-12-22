@@ -14,18 +14,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,13 +37,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -51,41 +54,30 @@ import java.util.Locale
 fun CalendarScreen() {
     val repo = remember { BirthdayRepository() }
     val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
+
+    // Tema Aplikasi
+    val bgColor = MaterialTheme.colorScheme.background
+    val contentColor = MaterialTheme.colorScheme.onBackground
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     // Data
-    var friendsList by remember { mutableStateOf<List<Person>>(emptyList()) }
-    var myProfile by remember { mutableStateOf<Person?>(null) }
     var allPeople by remember { mutableStateOf<List<Person>>(emptyList()) }
-
-    // State Kalender Custom
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
     var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
-
-    // List ultah di tanggal yang dipilih
     var birthdaysOnSelectedDate by remember { mutableStateOf<List<Person>>(emptyList()) }
 
-    // 1. Ambil Data
     LaunchedEffect(Unit) {
-        auth.currentUser?.uid?.let { uid ->
-            repo.getBirthdays(uid) { list -> friendsList = list }
-            db.collection("users").document(uid).get().addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    val name = doc.getString("fullName") ?: "Saya"
-                    val date = doc.getString("birthDate") ?: ""
-                    if (date.isNotEmpty()) {
-                        myProfile = Person(id = uid, name = "$name (Saya)", birthDate = date, userId = uid)
-                    }
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            repo.getAllRegisteredUsers { globalUsers ->
+                repo.getMyFriends(uid) { myFriends ->
+                    allPeople = (globalUsers + myFriends).distinctBy { it.name + it.birthDate }
                 }
             }
         }
     }
 
-    // 2. Gabung Data & Update Filter saat tanggal dipilih
-    LaunchedEffect(friendsList, myProfile, selectedDate) {
-        allPeople = friendsList + listOfNotNull(myProfile)
-
-        // Filter orang yang ultah di tanggal yang diklik
+    LaunchedEffect(allPeople, selectedDate) {
         birthdaysOnSelectedDate = allPeople.filter { person ->
             DateUtils.isBirthdayOnDate(
                 person.birthDate,
@@ -96,117 +88,109 @@ fun CalendarScreen() {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7FA)).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(bgColor).padding(16.dp)) {
 
-        // --- HEADER KALENDER (Bulan & Tahun) ---
+        // --- HEADER ---
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {
-                val newCal = currentMonth.clone() as Calendar
-                newCal.add(Calendar.MONTH, -1)
-                currentMonth = newCal
-            }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Prev")
+            IconButton(
+                onClick = { val n = currentMonth.clone() as Calendar; n.add(Calendar.MONTH, -1); currentMonth = n },
+                modifier = Modifier.background(Color.Gray.copy(0.1f), CircleShape)
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Prev", tint = contentColor) }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(SimpleDateFormat("MMMM", Locale.getDefault()).format(currentMonth.time), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
+                Text(SimpleDateFormat("yyyy", Locale.getDefault()).format(currentMonth.time), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = contentColor.copy(0.6f))
             }
 
-            Text(
-                text = SimpleDateFormat("MMMM yyyy", Locale.forLanguageTag("id-ID")).format(currentMonth.time),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF0D47A1)
-            )
-
-            IconButton(onClick = {
-                val newCal = currentMonth.clone() as Calendar
-                newCal.add(Calendar.MONTH, 1)
-                currentMonth = newCal
-            }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next")
-            }
+            IconButton(
+                onClick = { val n = currentMonth.clone() as Calendar; n.add(Calendar.MONTH, 1); currentMonth = n },
+                modifier = Modifier.background(Color.Gray.copy(0.1f), CircleShape)
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next", tint = contentColor) }
         }
 
-        // --- NAMA HARI (Minggu - Sabtu) ---
-        val daysOfWeek = listOf("Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab")
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            daysOfWeek.forEach { day ->
-                Text(
-                    text = day,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Gray
-                )
+        // --- HARI ---
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            listOf("Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab").forEach { day ->
+                Text(day, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (day == "Min") Color(0xFFFF5252) else contentColor.copy(0.5f))
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         // --- GRID TANGGAL ---
-        // Hitung logika kalender (jumlah hari, padding awal bulan)
         val daysInMonth = getDaysInMonth(currentMonth)
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
-            modifier = Modifier.height(320.dp) // Batasi tinggi grid
-        ) {
-            items(daysInMonth) { dayInfo ->
+        LazyVerticalGrid(columns = GridCells.Fixed(7), modifier = Modifier.height(340.dp)) {
+            // FIX: Menggunakan items(items = ...)
+            items(items = daysInMonth) { dayInfo ->
                 if (dayInfo == null) {
-                    // Kotak Kosong (Padding)
-                    Box(modifier = Modifier.size(40.dp))
+                    Box(modifier = Modifier.size(45.dp))
                 } else {
-                    // Kotak Tanggal
-                    val isSelected = isSameDay(selectedDate, dayInfo)
-                    val isToday = isToday(dayInfo)
+                    val date: Calendar = dayInfo
+                    val isSelected = isSameDay(selectedDate, date)
+                    val isToday = isToday(date)
+                    val hasEvent = allPeople.any { DateUtils.isBirthdayOnDate(it.birthDate, date.get(Calendar.YEAR), date.get(Calendar.MONTH), date.get(Calendar.DAY_OF_MONTH)) }
 
-                    // Cek apakah ada yang ultah di tanggal ini? (Untuk TITIK MERAH)
-                    val hasEvent = allPeople.any {
-                        DateUtils.isBirthdayOnDate(it.birthDate, dayInfo.get(Calendar.YEAR), dayInfo.get(Calendar.MONTH), dayInfo.get(Calendar.DAY_OF_MONTH))
+                    val backgroundBrush: Brush = if (isSelected) GradientRoyal else if (isToday) SolidColor(contentColor.copy(0.1f)) else SolidColor(Color.Transparent)
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                            .background(backgroundBrush)
+                            .clickable { selectedDate = date }
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = date.get(Calendar.DAY_OF_MONTH).toString(),
+                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else contentColor
+                            )
+                            if (hasEvent) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(if (isSelected) SolidColor(Color.White) else GradientSunset))
+                            }
+                        }
                     }
-
-                    DayCell(
-                        date = dayInfo,
-                        isSelected = isSelected,
-                        isToday = isToday,
-                        hasEvent = hasEvent,
-                        onClick = { selectedDate = it }
-                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- DAFTAR DETAIL ACARA ---
-        Text(
-            text = "Acara Tanggal ${SimpleDateFormat("dd MMMM yyyy", Locale.forLanguageTag("id-ID")).format(selectedDate.time)}",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = Color(0xFF0D47A1)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
+        // --- LIST ACARA ---
+        Text("Acara ${SimpleDateFormat("dd MMMM", Locale.getDefault()).format(selectedDate.time)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = contentColor)
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (birthdaysOnSelectedDate.isEmpty()) {
-            Text("Tidak ada acara.", color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                Text("Tidak ada acara.", color = contentColor.copy(0.5f))
+            }
         } else {
-            androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(birthdaysOnSelectedDate) { person ->
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // FIX: Menggunakan items(items = ...)
+                items(items = birthdaysOnSelectedDate) { person ->
                     val age = DateUtils.getAgeInYear(person.birthDate, selectedDate.get(Calendar.YEAR))
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(2.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(surfaceColor)
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("🎂", fontSize = 24.sp)
+                            Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(GradientOcean), contentAlignment = Alignment.Center) {
+                                val initial = if (person.name.isNotEmpty()) person.name.first().toString().uppercase() else "?"
+                                Text(initial, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Text(person.name, fontWeight = FontWeight.Bold)
-                                Text("Ulang tahun ke-$age", fontSize = 12.sp, color = Color.Gray)
+                                Text(person.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = contentColor)
+                                Text("Ulang tahun ke-$age", fontSize = 12.sp, color = contentColor.copy(0.6f))
                             }
                         }
                     }
@@ -216,78 +200,19 @@ fun CalendarScreen() {
     }
 }
 
-// --- KOMPONEN KOTAK TANGGAL ---
-@Composable
-fun DayCell(
-    date: Calendar,
-    isSelected: Boolean,
-    isToday: Boolean,
-    hasEvent: Boolean,
-    onClick: (Calendar) -> Unit
-) {
-    val dayNumber = date.get(Calendar.DAY_OF_MONTH).toString()
-
-    // Warna Background
-    val bgColor = when {
-        isSelected -> Color(0xFF0D47A1) // Biru Tua kalau dipilih
-        isToday -> Color(0xFFE3F2FD)    // Biru Muda kalau hari ini
-        else -> Color.Transparent
-    }
-
-    // Warna Teks
-    val textColor = if (isSelected) Color.White else Color.Black
-
-    Box(
-        modifier = Modifier
-            .padding(4.dp)
-            .aspectRatio(1f) // Biar kotak
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable { onClick(date) },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = dayNumber, color = textColor, fontWeight = FontWeight.Medium)
-
-            // TITIK MERAH (EVENT)
-            if (hasEvent) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) Color.White else Color(0xFFFF5252)) // Merah (atau putih jika selected)
-                )
-            }
-        }
-    }
-}
-
-// --- LOGIKA HITUNG HARI (HELPER) ---
+// --- HELPER FUNCTIONS (WAJIB ADA) ---
 fun getDaysInMonth(currentMonth: Calendar): List<Calendar?> {
     val days = mutableListOf<Calendar?>()
-
-    // Kloning biar gak ngerusak state asli
     val cal = currentMonth.clone() as Calendar
-    cal.set(Calendar.DAY_OF_MONTH, 1) // Set ke tanggal 1
-
-    // Cari tahu tanggal 1 itu hari apa (Minggu=1, Senin=2, ...)
-    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) // 1..7
-
-    // Tambah padding kosong sebelum tanggal 1
-    // (Misal tanggal 1 hari Rabu (4), berarti butuh 3 kotak kosong)
-    for (i in 1 until firstDayOfWeek) {
-        days.add(null)
-    }
-
-    // Tambah hari-hari dalam bulan
+    cal.set(Calendar.DAY_OF_MONTH, 1)
+    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+    for (i in 1 until firstDayOfWeek) { days.add(null) }
     val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
     for (i in 1..maxDays) {
         val dayCal = cal.clone() as Calendar
         dayCal.set(Calendar.DAY_OF_MONTH, i)
         days.add(dayCal)
     }
-
     return days
 }
 
@@ -298,6 +223,5 @@ fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
 }
 
 fun isToday(cal: Calendar): Boolean {
-    val today = Calendar.getInstance()
-    return isSameDay(cal, today)
+    return isSameDay(cal, Calendar.getInstance())
 }

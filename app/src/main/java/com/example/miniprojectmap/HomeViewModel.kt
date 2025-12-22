@@ -1,6 +1,5 @@
 package com.example.miniprojectmap
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -10,14 +9,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+// State untuk UI Home
 data class HomeUiState(
     val userName: String = "Loading...",
+    val quote: String = "Mengambil motivasi...",
+    val author: String = "",
     val nearestPerson: Person? = null,
     val ageNext: Int = 0,
-    val daysRemaining: Long = 0,
-    // TAMBAHAN: Data Quote
-    val quote: String = "Mengambil motivasi...",
-    val author: String = ""
+    val daysRemaining: Long = 0
 )
 
 class HomeViewModel : ViewModel() {
@@ -30,27 +29,19 @@ class HomeViewModel : ViewModel() {
 
     init {
         loadDashboardData()
-        fetchDailyQuote() // <--- Panggil fungsi baru ini
+        fetchDailyQuote()
     }
 
-    // FUNGSI BARU: HIT API QUOTE
     private fun fetchDailyQuote() {
         viewModelScope.launch {
             try {
-                // Panggil Retrofit
                 val response = ApiConfig.getApiService().getRandomQuote()
-
-                // Update UI State
                 _uiState.value = _uiState.value.copy(
                     quote = "\"${response.quote}\"",
                     author = "- ${response.author}"
                 )
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Gagal ambil quote: ${e.message}")
-                _uiState.value = _uiState.value.copy(
-                    quote = "Gagal memuat motivasi.",
-                    author = "Cek internetmu ya"
-                )
+                _uiState.value = _uiState.value.copy(quote = "Gagal memuat motivasi.", author = "")
             }
         }
     }
@@ -58,45 +49,38 @@ class HomeViewModel : ViewModel() {
     private fun loadDashboardData() {
         val uid = auth.currentUser?.uid ?: return
 
-        viewModelScope.launch {
-            db.collection("users").document(uid).get().addOnSuccessListener { document ->
-                var myProfile: Person? = null
-                var userName = "User"
+        // 1. Ambil Nama User yang Login (untuk sapaan "Halo, X")
+        db.collection("users").document(uid).get().addOnSuccessListener { document ->
+            val name = document?.getString("fullName") ?: "User"
+            _uiState.value = _uiState.value.copy(userName = name)
+        }
 
-                if (document != null && document.exists()) {
-                    userName = document.getString("fullName") ?: "User"
-                    val myDate = document.getString("birthDate") ?: ""
-                    if (myDate.isNotEmpty()) {
-                        myProfile = Person(id = uid, name = "$userName (Saya)", birthDate = myDate, userId = uid)
-                    }
-                }
-                _uiState.value = _uiState.value.copy(userName = userName)
+        // 2. GABUNGKAN DATA: (Semua User Global) + (Teman yang saya input)
+        repo.getAllRegisteredUsers { globalUsers ->
+            repo.getMyFriends(uid) { myFriends ->
 
-                repo.getBirthdays(uid) { friends ->
-                    calculateNearestBirthday(friends, myProfile)
-                }
+                // Gabung dan hapus duplikat (jika ada ID yang sama)
+                // Kita filter 'distinctBy' nama & tgl lahir untuk jaga-jaga
+                val allPeople = (globalUsers + myFriends).distinctBy { it.name + it.birthDate }
+
+                calculateNearestBirthday(allPeople)
             }
         }
     }
 
-    private fun calculateNearestBirthday(friends: List<Person>, myProfile: Person?) {
-        val allPeople = friends + listOfNotNull(myProfile)
-
-        if (allPeople.isNotEmpty()) {
-            val sorted = allPeople.sortedBy { person ->
+    private fun calculateNearestBirthday(people: List<Person>) {
+        if (people.isNotEmpty()) {
+            val sorted = people.sortedBy { person ->
                 DateUtils.getNextBirthday(person.birthDate)?.time ?: Long.MAX_VALUE
             }
-
             val nearest = sorted.firstOrNull()
             if (nearest != null) {
-                val ageNext = DateUtils.getAgeOnNextBirthday(nearest.birthDate)
                 val nextDate = DateUtils.getNextBirthday(nearest.birthDate)
+                val ageNext = DateUtils.getAgeOnNextBirthday(nearest.birthDate)
                 var daysRem = 0L
-
                 if (nextDate != null) {
                     daysRem = (nextDate.time - System.currentTimeMillis()) / (1000 * 60 * 60 * 24)
                 }
-
                 _uiState.value = _uiState.value.copy(
                     nearestPerson = nearest,
                     ageNext = ageNext,

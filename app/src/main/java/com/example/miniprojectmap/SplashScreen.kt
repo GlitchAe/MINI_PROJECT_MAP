@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,28 +25,34 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(onNavigateToNext: (Boolean) -> Unit) {
     LaunchedEffect(key1 = true) {
-        delay(3000)
+        delay(3000) // Tahan 3 detik
         val auth = FirebaseAuth.getInstance()
         onNavigateToNext(auth.currentUser != null)
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFE3F2FD)),
+        // FIX: Background mengikuti tema (Hitam pekat saat Dark Mode)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
+                // Tips: Bisa ganti Icons.Default.AccountCircle dengan Icons.Default.Cake jika suka
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = null,
                 modifier = Modifier.size(100.dp),
-                tint = Color(0xFF00695C)
+                // FIX: Warna Ikon mengikuti Primary Theme (Bukan hijau statis)
+                tint = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "HUT Komunitas Tracker",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF004D40)
+                // FIX: Warna Teks kontras dengan background (Putih di Dark, Hitam di Light)
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
     }

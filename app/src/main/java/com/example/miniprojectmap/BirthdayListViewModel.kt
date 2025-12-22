@@ -2,7 +2,6 @@ package com.example.miniprojectmap
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,11 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 class BirthdayListViewModel : ViewModel() {
     private val repo = BirthdayRepository()
     private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
 
-    // State list yang sudah digabung dan disortir
-    private val _birthdayList = MutableStateFlow<List<Person>>(emptyList())
-    val birthdayList: StateFlow<List<Person>> = _birthdayList.asStateFlow()
+    private val _uiState = MutableStateFlow<List<Person>>(emptyList())
+    val uiState: StateFlow<List<Person>> = _uiState.asStateFlow()
 
     init {
         loadBirthdays()
@@ -23,42 +20,34 @@ class BirthdayListViewModel : ViewModel() {
     private fun loadBirthdays() {
         val uid = auth.currentUser?.uid ?: return
 
-        // Ambil Data Teman (Realtime dari Repo)
-        repo.getBirthdays(uid) { friends ->
-            // Ambil Data Diri Sendiri (One-shot)
-            db.collection("users").document(uid).get().addOnSuccessListener { doc ->
-                var myProfile: Person? = null
-                if (doc.exists()) {
-                    val name = doc.getString("fullName") ?: "Saya"
-                    val date = doc.getString("birthDate") ?: ""
-                    if (date.isNotEmpty()) {
-                        myProfile = Person(id = uid, name = "$name (Saya)", birthDate = date, userId = uid)
-                    }
-                }
+        // 1. Ambil User Register (Otomatis)
+        repo.getAllRegisteredUsers { globalUsers ->
+            // 2. Ambil Teman Manual
+            repo.getMyFriends(uid) { myFriends ->
+                // Gabungkan (Prioritas User Register jika ada duplikat nama)
+                val combinedList = (globalUsers + myFriends)
+                    .distinctBy { it.name + it.birthDate }
+                    .sortedBy { it.name }
 
-                // Gabung & Sortir
-                processList(friends, myProfile)
+                _uiState.value = combinedList
             }
         }
     }
 
-    private fun processList(friends: List<Person>, myProfile: Person?) {
-        val rawList = friends + listOfNotNull(myProfile)
-        val sorted = rawList.sortedBy { person ->
-            DateUtils.getNextBirthday(person.birthDate)?.time ?: Long.MAX_VALUE
-        }
-        _birthdayList.value = sorted
-    }
-
-    fun addFriend(name: String, date: String) {
+    fun addBirthday(name: String, date: String) {
         val uid = auth.currentUser?.uid ?: return
-        repo.addBirthday(uid, name, date,
-            onSuccess = { /* Data akan otomatis refresh karena listener di repo */ },
-            onFailure = { /* Handle error jika perlu */ }
-        )
+        // Teman manual -> isManual = true
+        val newPerson = Person(name = name, birthDate = date, isManual = true)
+
+        repo.addBirthday(uid, newPerson) { success ->
+            if (success) loadBirthdays()
+        }
     }
 
-    fun deleteFriend(id: String) {
-        repo.deleteBirthday(id)
+    fun deleteBirthday(personId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        repo.deleteBirthday(uid, personId) { success ->
+            if (success) loadBirthdays()
+        }
     }
 }

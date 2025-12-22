@@ -4,38 +4,78 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 class BirthdayRepository {
     private val db = FirebaseFirestore.getInstance()
-    private val collectionRef = db.collection("birthdays")
 
-    // Tambah Data
-    fun addBirthday(
-        userId: String,
-        name: String,
-        date: String,
-        onSuccess: () -> Unit,
-        onFailure: (Exception) -> Unit
-    ) {
-        val newId = collectionRef.document().id
-        val person = Person(id = newId, name = name, birthDate = date, userId = userId)
+    // 1. Ambil Semua User yang Register di Aplikasi (Otomatis)
+    fun getAllRegisteredUsers(onResult: (List<Person>) -> Unit) {
+        db.collection("users")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val users = snapshot.documents.mapNotNull { doc ->
+                    // User register pakai field "fullName"
+                    val name = doc.getString("fullName")
+                    val date = doc.getString("birthDate")
 
-        collectionRef.document(newId)
-            .set(person)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { onFailure(it) }
-    }
-
-    // Ambil Data (Realtime)
-    fun getBirthdays(userId: String, onDataChanged: (List<Person>) -> Unit) {
-        collectionRef
-            .whereEqualTo("userId", userId)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null || snapshot == null) return@addSnapshotListener
-                val list = snapshot.toObjects(Person::class.java)
-                onDataChanged(list)
+                    if (!name.isNullOrEmpty() && !date.isNullOrEmpty()) {
+                        Person(
+                            id = doc.id,
+                            name = name,
+                            birthDate = date,
+                            isManual = false // Ini user asli, tidak bisa dihapus dari list
+                        )
+                    } else null
+                }
+                onResult(users)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
             }
     }
 
-    // Hapus Data
-    fun deleteBirthday(documentId: String) {
-        collectionRef.document(documentId).delete()
+    // 2. Ambil Teman yang Kita Input Sendiri (Manual)
+    fun getMyFriends(userId: String, onResult: (List<Person>) -> Unit) {
+        db.collection("users").document(userId).collection("friends")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val friends = snapshot.documents.mapNotNull { doc ->
+                    // Teman manual pakai field "name" (sesuai input dialog)
+                    val name = doc.getString("name")
+                    val date = doc.getString("birthDate")
+
+                    if (!name.isNullOrEmpty() && !date.isNullOrEmpty()) {
+                        Person(
+                            id = doc.id,
+                            name = name,
+                            birthDate = date,
+                            isManual = true // Ini manual, bisa dihapus
+                        )
+                    } else null
+                }
+                onResult(friends)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+    // 3. Tambah Teman Manual
+    fun addBirthday(userId: String, person: Person, onComplete: (Boolean) -> Unit) {
+        val data = hashMapOf(
+            "name" to person.name,
+            "birthDate" to person.birthDate,
+            "isManual" to true
+        )
+
+        db.collection("users").document(userId).collection("friends")
+            .add(data)
+            .addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener { onComplete(false) }
+    }
+
+    // 4. Hapus Teman Manual
+    fun deleteBirthday(userId: String, personId: String, onComplete: (Boolean) -> Unit) {
+        db.collection("users").document(userId).collection("friends").document(personId)
+            .delete()
+            .addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener { onComplete(false) }
     }
 }

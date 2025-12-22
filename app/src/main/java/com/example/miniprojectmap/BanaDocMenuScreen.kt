@@ -1,32 +1,20 @@
 package com.example.miniprojectmap
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -39,82 +27,54 @@ fun BanaDocMenuScreen(
     onNavigateToGallery: () -> Unit,
     onNavigateToHistory: () -> Unit
 ) {
+    // FIX: Gunakan Tema Aplikasi
+    val bgColor = MaterialTheme.colorScheme.background
+    val contentColor = MaterialTheme.colorScheme.onBackground
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
     Scaffold(
+        containerColor = bgColor,
         topBar = {
             TopAppBar(
-                title = { Text("BanaDoc AI", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFFF9C4))
+                title = { Text("BanaDoc AI", fontWeight = FontWeight.ExtraBold, fontSize = 28.sp) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = contentColor)
             )
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header Info
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, null, tint = Color(0xFF1976D2))
+            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(surfaceColor)) {
+                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("🔍", fontSize = 32.sp)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        "Deteksi penyakit pisang dengan mengupload foto daun/buah.",
-                        fontSize = 14.sp,
-                        color = Color(0xFF0D47A1)
-                    )
+                    Text("Deteksi penyakit pisang menggunakan AI. Pilih foto daun atau buah untuk mulai.", fontSize = 14.sp, color = contentColor.copy(0.7f), lineHeight = 20.sp)
                 }
             }
 
-            // MENU 1: PILIH DARI GALERI (Pengganti Kamera)
-            BigMenuButton(
-                title = "Pilih Foto",
-                desc = "Ambil dari Galeri",
-                icon = Icons.Default.Image,
-                color = Color(0xFFFFB74D),
-                onClick = onNavigateToGallery
-            )
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // MENU 2: RIWAYAT
-            BigMenuButton(
-                title = "Riwayat",
-                desc = "Lihat hasil sebelumnya",
-                icon = Icons.Default.History,
-                color = Color(0xFF81C784),
-                onClick = onNavigateToHistory
-            )
+            ActionCard("Mulai Scan", "Ambil Foto / Galeri", Icons.Default.Image, GradientSunset, onNavigateToGallery)
+            Spacer(modifier = Modifier.height(20.dp))
+            ActionCard("Riwayat Diagnosa", "Lihat hasil scan lama", Icons.Default.History, GradientOcean, onNavigateToHistory)
         }
     }
 }
 
 @Composable
-fun BigMenuButton(title: String, desc: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(6.dp),
-        colors = CardDefaults.cardColors(containerColor = color)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+fun ActionCard(title: String, desc: String, icon: ImageVector, brush: Brush, onClick: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().height(140.dp).shadow(10.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(brush).clickable { onClick() }) {
+        Box(Modifier.align(Alignment.TopEnd).offset(x = 20.dp, y = (-20).dp).size(80.dp).background(Color.White.copy(0.1f), CircleShape))
+        Row(modifier = Modifier.fillMaxSize().padding(24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text(title, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(desc, fontSize = 14.sp, color = Color.White.copy(alpha = 0.9f))
+                Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(desc, fontSize = 14.sp, color = Color.White.copy(0.8f))
             }
-            Icon(icon, null, tint = Color.White, modifier = Modifier.size(48.dp))
+            Box(modifier = Modifier.size(56.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(32.dp))
+            }
         }
     }
 }

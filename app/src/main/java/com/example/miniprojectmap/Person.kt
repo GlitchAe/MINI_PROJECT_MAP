@@ -1,8 +1,9 @@
 package com.example.miniprojectmap
 
 data class Person(
-    var id: String = "",       // ID dokumen dari Firestore
-    val name: String = "",     // Nama teman
-    val birthDate: String = "", // Tanggal lahir
-    val userId: String = ""    // ID user pemilik data ini
+    val id: String = "",
+    val name: String = "",
+    val birthDate: String = "",
+    // Field baru: Default false (berarti dari User Register/Otomatis)
+    val isManual: Boolean = false
 )

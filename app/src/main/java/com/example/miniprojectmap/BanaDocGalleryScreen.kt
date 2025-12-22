@@ -1,14 +1,18 @@
 package com.example.miniprojectmap
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,183 +24,152 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BanaDocGalleryScreen(onBack: () -> Unit) {
+fun BanaDocGalleryScreen(
+    onBack: () -> Unit,
+    viewModel: BanaDocViewModel = viewModel()
+) {
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
 
-    // 1. SOLUSI WARNING: Gunakan rememberCoroutineScope, bukan GlobalScope
-    val scope = rememberCoroutineScope()
+    val bgColor = MaterialTheme.colorScheme.background
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var analysisResult by remember { mutableStateOf<BananaClassifier.Result?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    var isUploading by remember { mutableStateOf(false) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher Galeri
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        selectedImageUri = uri
-        analysisResult = null // Reset hasil jika ganti foto
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) viewModel.processImage(uri)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // AREA FOTO
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray)
-                .clickable { galleryLauncher.launch("image/*") },
-            contentAlignment = Alignment.Center
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success && tempCameraUri != null) viewModel.processImage(tempCameraUri!!)
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) viewModel.fetchLocation()
+        else Toast.makeText(context, "Izin Lokasi dibutuhkan", Toast.LENGTH_SHORT).show()
+    }
+
+    fun checkPermissionAndAnalyze() {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.analyzeAndSave()
+        } else {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    Scaffold(
+        containerColor = bgColor,
+        topBar = {
+            TopAppBar(
+                title = { Text("Scan & Diagnosa", fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (selectedImageUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(selectedImageUri),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
-                    Text("Klik untuk Pilih Foto", color = Color.Gray)
+            Box(
+                modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(20.dp)).background(surfaceColor),
+                contentAlignment = Alignment.Center
+            ) {
+                if (uiState.isImageLoading) {
+                    CircularProgressIndicator()
+                } else if (uiState.bitmap != null) {
+                    Image(bitmap = uiState.bitmap!!.asImageBitmap(), contentDescription = "Preview", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Default.Image, null, modifier = Modifier.size(60.dp), tint = Color.Gray); Text("Belum ada foto", color = Color.Gray) }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // TOMBOL ANALISA
-        if (selectedImageUri != null && analysisResult == null) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = {
+                        tempCameraUri = ImageUtils.createImageFile(context)
+                        cameraLauncher.launch(tempCameraUri!!)
+                    },
+                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)
+                ) { Icon(Icons.Default.CameraAlt, null); Spacer(modifier = Modifier.width(8.dp)); Text("Kamera") }
+
+                OutlinedButton(
+                    onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)
+                ) { Icon(Icons.Default.Image, null); Spacer(modifier = Modifier.width(8.dp)); Text("Galeri") }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Button(
-                onClick = {
-                    isLoading = true
-                    // 2. Menggunakan scope yang aman
-                    scope.launch {
-                        val result = BananaClassifier.classifyImage()
-                        analysisResult = result
-                        isLoading = false
-                    }
-                },
+                onClick = { checkPermissionAndAnalyze() },
+                enabled = uiState.selectedUri != null && !uiState.isAnalyzing && !uiState.isImageLoading,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = !isLoading
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                else {
-                    Icon(Icons.Default.Analytics, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Analisa Penyakit")
-                }
-            }
-        }
-
-        // HASIL ANALISA
-        if (analysisResult != null) {
-            val result = analysisResult!!
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Hasil Diagnosa:", fontSize = 14.sp, color = Color.Gray)
-                    Text(result.diseaseName, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
-                    Text("Akurasi: ${result.confidence}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Solusi:", fontWeight = FontWeight.Bold)
-                    Text(result.solution, fontSize = 14.sp)
-                }
+                if (uiState.isAnalyzing) { CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp)); Spacer(modifier = Modifier.width(12.dp)); Text("Menganalisis AI...") } else { Text("Diagnosa Sekarang") }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (uiState.diagnosisResult != null) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (uiState.diagnosisResult!!.contains("Sehat")) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) { Icon(if (uiState.diagnosisResult!!.contains("Sehat")) Icons.Default.CheckCircle else Icons.Default.Warning, null, tint = if (uiState.diagnosisResult!!.contains("Sehat")) Color(0xFF2E7D32) else Color(0xFFC62828)); Spacer(modifier = Modifier.width(12.dp)); Text("Hasil Diagnosa", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black) }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(uiState.diagnosisResult!!, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                        Text("Akurasi AI: ${uiState.confidenceScore}%", fontSize = 14.sp, color = Color.Gray)
 
-            // TOMBOL SIMPAN
-            Button(
-                onClick = {
-                    isUploading = true
-                    val user = FirebaseAuth.getInstance().currentUser
+                        // FIX: Ganti Divider -> HorizontalDivider
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                    if (user == null) {
-                        Toast.makeText(context, "Silakan login ulang", Toast.LENGTH_SHORT).show()
-                        isUploading = false
-                        return@Button
+                        Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(8.dp)); Text(uiState.locationText, fontSize = 12.sp, color = Color.Gray) }
                     }
-
-                    val storageRef = FirebaseStorage.getInstance().reference
-                        .child("scan_history/${user.uid}/${System.currentTimeMillis()}.jpg")
-
-                    selectedImageUri?.let { uri ->
-                        storageRef.putFile(uri)
-                            .addOnSuccessListener {
-                                storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                                    val data = hashMapOf(
-                                        "userId" to user.uid,
-                                        "diseaseName" to result.diseaseName,
-                                        "confidence" to result.confidence,
-                                        "date" to SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()),
-                                        "imageUrl" to downloadUrl.toString(),
-                                        "description" to result.description
-                                    )
-                                    FirebaseFirestore.getInstance().collection("scan_history").add(data)
-                                        .addOnSuccessListener {
-                                            isUploading = false
-                                            Toast.makeText(context, "Tersimpan di Riwayat!", Toast.LENGTH_SHORT).show()
-                                            onBack()
-                                        }
-                                }
-                            }
-                            .addOnFailureListener {
-                                isUploading = false
-                                Toast.makeText(context, "Gagal: ${it.message}", Toast.LENGTH_SHORT).show()
-                            }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
-                enabled = !isUploading
-            ) {
-                if (isUploading) Text("Menyimpan...") else Text("Simpan ke Riwayat")
+                }
             }
         }
     }
