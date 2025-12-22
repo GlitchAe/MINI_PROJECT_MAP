@@ -57,15 +57,14 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    // --- COMPOSE BOM (Versi Stabil Agustus 2024) ---
-    // Versi ini sudah memperbaiki bug clickable/indication yang Anda alami
+    // --- COMPOSE BOM
     implementation(platform("androidx.compose:compose-bom:2024.08.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // PENTING: Tambahkan ini untuk mencegah crash ikon
+    // PENTING: mencegah crash ikon
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
 
@@ -97,4 +96,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // WORK MANAGER (Untuk penjadwalan otomatis)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }
