@@ -15,9 +15,13 @@ Kelas   : IF570-C/CL
 -----------------------------------------------------------------------------
 1. DESKRIPSI APLIKASI
 -----------------------------------------------------------------------------
-HUT Community Tracker dirancang untuk mempermudah pencatatan data ulang tahun, memberikan notifikasi otomatis, serta memastikan setiap anggota tetap merasa dihargai. Dengan adanya sistem yang terpusat dan mudah digunakan, komunitas dapat menjaga kehangatan internal, meningkatkan partisipasi, dan memperkuat solidaritas antaranggota.
+HUT Community Tracker dirancang untuk mempermudah pencatatan data ulang tahun, memberikan notifikasi otomatis, 
+serta memastikan setiap anggota tetap merasa dihargai. Dengan adanya sistem yang terpusat dan mudah digunakan, 
+komunitas dapat menjaga kehangatan internal, meningkatkan partisipasi, dan memperkuat solidaritas antaranggota.
 
-BanaDoc AI dirancang untuk membantu petani  mendeteksi penyakit pada tanaman pisang melalui citra daun. Aplikasi ini mengintegrasikan fitur native Android (Kamera & GPS) dengan layanan Cloud (Firebase) untuk penyimpanan data secara realtime.
+BanaDoc AI dirancang untuk membantu petani  mendeteksi penyakit pada tanaman pisang melalui citra daun. 
+Aplikasi ini mengintegrasikan fitur native Android (Kamera & GPS) dengan layanan Cloud (Firebase) untuk 
+penyimpanan data secara realtime.
 
 -----------------------------------------------------------------------------
 2. FITUR UNGGULAN (CORE FEATURES)
