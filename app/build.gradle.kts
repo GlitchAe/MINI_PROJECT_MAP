@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.miniprojectmap"
-    compileSdk = 35
+    compileSdk = 36
 
     buildFeatures {
         viewBinding = true
